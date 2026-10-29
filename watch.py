@@ -154,18 +154,30 @@ def evaluate(
     return results
 
 
-def render_report(results: list[Result], server: dict | None, now: datetime) -> str:
-    """Render the results as a Markdown report (safe to post publicly)."""
+SERVER_LABEL = "your server"
+
+
+def _where(result: Result) -> str:
+    """Location shown publicly; upgrade rows hide the server's location."""
+    return SERVER_LABEL if result.purpose == "upgrade" else result.location
+
+
+def _public_reason(reason: str) -> str:
+    """Upgrade blockers can reveal the server's current type, so generalise them."""
+    return reason if reason == "temporarily unavailable" else "not possible for your server"
+
+
+def render_report(results: list[Result], now: datetime) -> str:
+    """Render the results as a Markdown report (safe to post publicly).
+
+    Upgrade rows never name the watched server's type or location.
+    """
     lines = [f"Checked at {now.strftime('%Y-%m-%d %H:%M UTC')}.", ""]
-    if server is not None:
-        lines += [
-            f"Watched server: type `{server['server_type']['name']}` in `{server['location']['name']}`.",
-            "",
-        ]
     lines += ["| Server type | Location | Purpose | Status |", "|---|---|---|---|"]
     for r in results:
         mark = "✅" if r.available else "❌"
-        lines.append(f"| `{r.server_type}` | `{r.location}` | {r.purpose} | {mark} {r.reason} |")
+        reason = r.reason if r.purpose == "new" or r.available else _public_reason(r.reason)
+        lines.append(f"| `{r.server_type}` | {_where(r)} | {r.purpose} | {mark} {reason} |")
     if any(r.available and r.purpose == "upgrade" for r in results):
         lines += [
             "",
@@ -176,11 +188,11 @@ def render_report(results: list[Result], server: dict | None, now: datetime) -> 
 
 
 def summary_title(results: list[Result]) -> str:
-    """One-line title naming what is available, e.g. 'CX43 available: nbg1 (new, upgrade)'."""
+    """One-line title naming what is available, e.g. 'CX43 available: nbg1 (new), your server (upgrade)'."""
     hits: dict[str, dict[str, list[str]]] = {}
     for r in results:
         if r.available:
-            hits.setdefault(r.server_type, {}).setdefault(r.location, []).append(r.purpose)
+            hits.setdefault(r.server_type, {}).setdefault(_where(r), []).append(r.purpose)
     parts = []
     for server_type, locs in hits.items():
         where = ", ".join(f"{loc} ({', '.join(p)})" for loc, p in locs.items())
@@ -218,7 +230,7 @@ def run(env: dict[str, str], now: datetime | None = None) -> int:
         return 1
 
     results = evaluate(types, settings.locations, server, now)
-    report = render_report(results, server, now)
+    report = render_report(results, now)
     with open(settings.report_path, "w", encoding="utf-8") as handle:
         handle.write(report)
     summary_path = env.get("GITHUB_STEP_SUMMARY")
