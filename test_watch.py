@@ -45,7 +45,7 @@ class EvaluateTest(unittest.TestCase):
     def test_upgrade_available(self):
         results = watch.evaluate({"cx43": CX43_IN}, ["nbg1"], SERVER, NOW)
         self.assertTrue(all(r.available for r in results))
-        self.assertEqual(watch.summary_title(results), "CX43 available: nbg1 (new, upgrade)")
+        self.assertEqual(watch.summary_title(results), "CX43 available: nbg1 (new), your server (upgrade)")
 
     def test_wildcard_locations(self):
         results = watch.evaluate({"cx43": CX43_OUT}, ["*"], None, NOW)
@@ -74,6 +74,7 @@ class RunTest(unittest.TestCase):
         written = "".join(c.args[0] for c in opened().write.call_args_list)
         self.assertIn("available=true", written)
         self.assertNotIn("secret-name", written)
+        self.assertNotIn("cx23", written)  # current type stays private
 
 
 if __name__ == "__main__":

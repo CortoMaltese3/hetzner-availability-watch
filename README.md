@@ -38,8 +38,8 @@ A one-off check with other values: **Actions → watch → Run workflow**, or
 
 ## Notes
 
-- Workflow logs in a public repo are public. The report shows types and locations,
-  never the server name or token.
+- Workflow logs in a public repo are public. The report shows the watched types and locations; upgrade rows say "your server",
+  never the server's name, current type, location or the token.
 - GitHub turns off scheduled workflows in public repos after 60 days without a commit. The
   workflow pushes an empty `chore: keepalive` commit after 50 quiet days to prevent that.
 - Rescaling needs the server powered off. Choose "CPU and RAM only" (`upgrade_disk: false`)
