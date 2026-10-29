@@ -1,3 +1,5 @@
 report.md
 body.md
 __pycache__/
+dev.txt
+.env
