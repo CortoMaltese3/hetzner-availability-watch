@@ -1,0 +1,70 @@
+name: watch
+
+on:
+  schedule:
+    - cron: "*/5 * * * *" # GitHub's minimum; runs may start a few minutes late
+  workflow_dispatch:
+    inputs:
+      server_types:
+        description: "Server types, comma-separated (blank = repo variable)"
+        required: false
+      locations:
+        description: "Locations, comma-separated or * (blank = repo variable)"
+        required: false
+
+permissions:
+  contents: write # keepalive commit only
+  issues: write
+
+concurrency:
+  group: watch
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check availability
+        id: check
+        env:
+          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+          WATCH_SERVER_NAME: ${{ secrets.WATCH_SERVER_NAME }}
+          WATCH_SERVER_TYPES: ${{ inputs.server_types || vars.WATCH_SERVER_TYPES }}
+          WATCH_LOCATIONS: ${{ inputs.locations || vars.WATCH_LOCATIONS }}
+        run: |
+          if [ -z "$HCLOUD_TOKEN" ]; then
+            echo "::warning::HCLOUD_TOKEN secret is not set; skipping the check"
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          python3 watch.py
+
+      - name: Open or close the notification issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AVAILABLE: ${{ steps.check.outputs.available }}
+          TITLE: ${{ steps.check.outputs.title }}
+          NOTIFY: ${{ vars.WATCH_NOTIFY_USER || github.repository_owner }}
+        run: |
+          gh label create available --color 0E8A16 --description "Watched server type is available" --force >/dev/null
+          open=$(gh issue list --label available --state open --json number --jq '.[0].number // empty')
+          if [ "$AVAILABLE" = "true" ] && [ -z "$open" ]; then
+            printf '@%s\n\n' "$NOTIFY" | cat - report.md > body.md
+            gh issue create --title "$TITLE" --label available --body-file body.md
+          elif [ "$AVAILABLE" != "true" ] && [ -n "$open" ]; then
+            gh issue close "$open" --comment "No longer available as of $(date -u '+%Y-%m-%d %H:%M UTC')."
+          fi
+
+      # GitHub disables scheduled workflows in public repos after 60 days without a commit.
+      - name: Keepalive
+        run: |
+          age=$(( $(date +%s) - $(git log -1 --format=%ct) ))
+          if [ "$age" -gt $(( 50 * 86400 )) ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -m "chore: keepalive"
+            git push
+          fi
