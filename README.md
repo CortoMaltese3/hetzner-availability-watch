@@ -2,7 +2,10 @@
 
 Polls the Hetzner Cloud API every 5 minutes and opens a GitHub issue when a watched
 server type becomes available, either for a new server or as an upgrade of an existing
-one. The issue closes itself when the type sells out again. It runs on GitHub Actions in
+one. The issue closes itself when the type sells out again. While it is open, a change in
+what is on offer updates its title and report, and a newly added hit (for example the upgrade
+appearing after a new server in another location) comments with the @mention. "(new)" means
+create a server in that location; "your server (upgrade)" means rescale the named server. It runs on GitHub Actions in
 this public repo, so it uses no paid Actions minutes.
 
 ## How it decides

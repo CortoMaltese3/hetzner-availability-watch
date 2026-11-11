@@ -185,7 +185,22 @@ def render_report(results: list[Result], now: datetime) -> str:
             "Upgrading: power the server off, then rescale it in the Cloud Console. "
             "Choose **CPU and RAM only** to keep the option of downgrading later.",
         ]
+    if any(r.available and r.purpose == "new" for r in results):
+        lines += [
+            "",
+            "New server: create it in the Cloud Console, in a location marked ✅ with purpose `new`.",
+        ]
     return "\n".join(lines) + "\n"
+
+
+def summary_hits(results: list[Result]) -> str:
+    """Stable, comma-separated ``type|where|purpose`` tokens for what is available (no spaces).
+
+    The workflow stores this in the issue body and compares it on the next run to see
+    whether a hit was added.
+    """
+    tokens = {f"{r.server_type}|{_where(r).replace(' ', '_')}|{r.purpose}" for r in results if r.available}
+    return ",".join(sorted(tokens))
 
 
 def summary_title(results: list[Result]) -> str:
@@ -251,6 +266,7 @@ def run(env: dict[str, str], now: datetime | None = None) -> int:
         {
             "available": str(available).lower(),
             "title": summary_title(results),
+            "hits": summary_hits(results),
             "server_missing": str(server_missing).lower(),
         },
     )

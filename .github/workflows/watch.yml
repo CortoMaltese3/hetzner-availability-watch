@@ -47,14 +47,27 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           AVAILABLE: ${{ steps.check.outputs.available }}
           TITLE: ${{ steps.check.outputs.title }}
+          HITS: ${{ steps.check.outputs.hits }}
           NOTIFY: ${{ vars.WATCH_NOTIFY_USER || github.repository_owner }}
         run: |
           gh label create available --color 0E8A16 --description "Watched server type is available" --force >/dev/null
           open=$(gh issue list --label available --state open --json number --jq '.[0].number // empty')
+          # The body starts with the @mention and a hidden marker of what is on offer (type|where|purpose).
+          printf '@%s\n\n<!-- hits:%s -->\n\n' "$NOTIFY" "$HITS" | cat - report.md > body.md
           if [ "$AVAILABLE" = "true" ] && [ -z "$open" ]; then
-            printf '@%s\n\n' "$NOTIFY" | cat - report.md > body.md
             gh issue create --title "$TITLE" --label available --body-file body.md
-          elif [ "$AVAILABLE" != "true" ] && [ -n "$open" ]; then
+          elif [ "$AVAILABLE" = "true" ]; then
+            old_hits=$(gh issue view "$open" --json body --jq .body | grep -o 'hits:[^ ]*' | head -n 1 | cut -c6- || true)
+            if [ "$old_hits" != "$HITS" ]; then
+              # What is on offer changed: keep the title and report current, and notify only when a hit was added.
+              gh issue edit "$open" --title "$TITLE" --body-file body.md
+              added=$(comm -13 <(printf '%s' "$old_hits" | tr ',' '\n' | sort) <(printf '%s' "$HITS" | tr ',' '\n' | sort))
+              if [ -n "$added" ]; then
+                printf '@%s now on offer: %s\n\n' "$NOTIFY" "$TITLE" | cat - report.md > comment.md
+                gh issue comment "$open" --body-file comment.md
+              fi
+            fi
+          elif [ -n "$open" ]; then
             gh issue close "$open" --comment "No longer available as of $(date -u '+%Y-%m-%d %H:%M UTC')."
           fi
 
