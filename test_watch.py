@@ -47,6 +47,18 @@ class EvaluateTest(unittest.TestCase):
         self.assertTrue(all(r.available for r in results))
         self.assertEqual(watch.summary_title(results), "CX43 available: nbg1 (new), your server (upgrade)")
 
+    def test_hits_and_report_say_what_is_on_offer(self):
+        results = watch.evaluate({"cx43": CX43_OUT}, ["nbg1", "fsn1"], SERVER, NOW)
+        self.assertEqual(watch.summary_hits(results), "cx43|fsn1|new")
+        self.assertIn("New server:", watch.render_report(results, NOW))
+        self.assertNotIn("Upgrading:", watch.render_report(results, NOW))
+        both = watch.evaluate({"cx43": CX43_IN}, ["nbg1"], SERVER, NOW)
+        self.assertEqual(watch.summary_hits(both), "cx43|nbg1|new,cx43|your_server|upgrade")
+        self.assertIn("Upgrading:", watch.render_report(both, NOW))
+        nothing = watch.evaluate({"cx43": CX43_OUT}, ["nbg1"], SERVER, NOW)
+        self.assertEqual(watch.summary_hits(nothing), "")
+        self.assertNotIn("New server:", watch.render_report(nothing, NOW))
+
     def test_wildcard_locations(self):
         results = watch.evaluate({"cx43": CX43_OUT}, ["*"], None, NOW)
         self.assertEqual({r.location: r.available for r in results}, {"fsn1": True, "nbg1": False})
