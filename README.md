@@ -53,8 +53,12 @@ the schedule stays as the fallback while the PC is off. One loop per PC; to star
 shortcut to the start command in `shell:startup`.
 
 ```powershell
-powershell -NoProfile -WindowStyle Minimized -File dispatch-loop.ps1
+powershell -NoProfile -File dispatch-loop.ps1
 ```
+
+About 45 s after each dispatch the loop looks for an open `available` issue. While one is open it prints a
+yellow `AVAILABLE: <title> <url>` line every cycle; the first time it sees an issue it also beeps three times
+and raises a Windows toast. A failed check prints `alert check failed`. No agent is involved.
 
 ## Local run
 
