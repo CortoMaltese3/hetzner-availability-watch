@@ -20,7 +20,7 @@ It only reads. It never creates or rescales anything.
 | Name | Kind | Default | Meaning |
 |---|---|---|---|
 | `HCLOUD_TOKEN` | secret | — | Hetzner Cloud API token, **Read** permission is enough |
-| `WATCH_SERVER_NAME` | secret | — | optional: server to check for an upgrade (a secret so it stays out of public logs) |
+| `WATCH_SERVER_NAME` | secret | — | optional: server to check for an upgrade (a secret so it stays out of public logs); if it matches no server, the new-server check still runs and the run ends red |
 | `WATCH_SERVER_TYPES` | variable | `cx43` | comma-separated, e.g. `cx43,cx53` |
 | `WATCH_LOCATIONS` | variable | `nbg1` | comma-separated, e.g. `nbg1,fsn1`, or `*` for every location |
 | `WATCH_NOTIFY_USER` | variable | repo owner | GitHub login mentioned in the issue |

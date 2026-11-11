@@ -155,6 +155,7 @@ def evaluate(
 
 
 SERVER_LABEL = "your server"
+SERVER_MISSING = "Upgrade not checked: WATCH_SERVER_NAME matches no server in this project."
 
 
 def _where(result: Result) -> str:
@@ -221,16 +222,21 @@ def run(env: dict[str, str], now: datetime | None = None) -> int:
                 raise WatchError(f"unknown server type: {name}")
             types[name] = server_type
         server = None
+        server_missing = False
         if settings.server_name:
             server = find_one(settings, "/servers", "servers", settings.server_name)
-            if server is None:
-                raise WatchError("WATCH_SERVER_NAME does not match a server in this project")
+            server_missing = server is None
     except WatchError as exc:
         log.error("%s", exc)
         return 1
 
+    # A stale server name must not silence the new-server check: report it, check the rest.
+    if server_missing:
+        log.warning("%s", SERVER_MISSING)
     results = evaluate(types, settings.locations, server, now)
     report = render_report(results, now)
+    if server_missing:
+        report += f"\n{SERVER_MISSING}\n"
     with open(settings.report_path, "w", encoding="utf-8") as handle:
         handle.write(report)
     summary_path = env.get("GITHUB_STEP_SUMMARY")
@@ -242,7 +248,11 @@ def run(env: dict[str, str], now: datetime | None = None) -> int:
     available = any(r.available for r in results)
     write_outputs(
         env.get("GITHUB_OUTPUT"),
-        {"available": str(available).lower(), "title": summary_title(results)},
+        {
+            "available": str(available).lower(),
+            "title": summary_title(results),
+            "server_missing": str(server_missing).lower(),
+        },
     )
     log.info("available=%s", available)
     return 0

@@ -58,6 +58,13 @@ jobs:
             gh issue close "$open" --comment "No longer available as of $(date -u '+%Y-%m-%d %H:%M UTC')."
           fi
 
+      # After the issue step, so a new-server hit is still reported.
+      - name: Fail on a stale server name
+        if: steps.check.outputs.server_missing == 'true'
+        run: |
+          echo "::error::WATCH_SERVER_NAME matches no server in this project; the upgrade was not checked. Update the secret."
+          exit 1
+
       # GitHub disables scheduled workflows in public repos after 60 days without a commit.
       - name: Keepalive
         run: |

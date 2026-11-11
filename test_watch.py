@@ -76,6 +76,21 @@ class RunTest(unittest.TestCase):
         self.assertNotIn("secret-name", written)
         self.assertNotIn("cx23", written)  # current type stays private
 
+    def test_missing_server_still_checks_new(self):
+        def fake_find(settings, path, key, name):
+            return CX43_IN if key == "server_types" else None
+
+        with mock.patch.object(watch, "find_one", side_effect=fake_find), \
+                mock.patch("builtins.open", mock.mock_open()) as opened:
+            code = watch.run({"HCLOUD_TOKEN": "t", "WATCH_SERVER_NAME": "gone",
+                              "GITHUB_OUTPUT": "out.txt"}, NOW)
+        self.assertEqual(code, 0)
+        written = "".join(c.args[0] for c in opened().write.call_args_list)
+        self.assertIn("available=true", written)
+        self.assertIn("server_missing=true", written)
+        self.assertIn("Upgrade not checked", written)
+        self.assertNotIn("gone", written)
+
 
 if __name__ == "__main__":
     unittest.main()
