@@ -45,6 +45,17 @@ A one-off check with other values: **Actions → watch → Run workflow**, or
 - Rescaling needs the server powered off. Choose "CPU and RAM only" (`upgrade_disk: false`)
   to keep the option of downgrading later.
 
+## Every 5 minutes from a PC
+
+GitHub runs the `*/5` schedule only every few hours (3–7 h apart in this repo's run history). A PC that is
+on most of the day closes the gaps: `dispatch-loop.ps1` starts the workflow with `gh` every 5 minutes, and
+the schedule stays as the fallback while the PC is off. One loop per PC; to start it at logon, put a
+shortcut to the start command in `shell:startup`.
+
+```powershell
+powershell -NoProfile -WindowStyle Minimized -File dispatch-loop.ps1
+```
+
 ## Local run
 
 ```sh
